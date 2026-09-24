@@ -507,25 +507,21 @@ analyze_button = st.button(
 # ANALYSIS
 # =========================================================
 
+# =========================================================
+# ANALYZE BUTTON
+# =========================================================
+
+analyze_button = st.button(
+    "🔍 Analyze E-Waste",
+    type="primary"
+)
+
+
+# =========================================================
+# ANALYSIS
+# =========================================================
+
 if analyze_button:
-
-    if uploaded_file is None:
-
-        st.error(
-            "Please upload an e-waste image."
-        )
-
-    else:
-
-        image = Image.open(
-            uploaded_file
-        ).convert("RGB")
-
-        with st.spinner(
-            "🤖 AI analyzing e-waste..."
-        ):
-
-            if analyze_button:
 
     if uploaded_file is None:
 
@@ -537,14 +533,18 @@ if analyze_button:
 
         try:
 
+            # Load image
             image = Image.open(
                 uploaded_file
             ).convert("RGB")
 
+            # Show image information
             st.info(
-                f"Image loaded: {image.size[0]} × {image.size[1]}"
+                f"Image loaded: "
+                f"{image.size[0]} × {image.size[1]}"
             )
 
+            # Run AI analysis
             with st.spinner(
                 "🤖 AI analyzing e-waste..."
             ):
@@ -562,6 +562,10 @@ if analyze_button:
                     condition,
                     location
                 )
+
+            # =============================================
+            # RESULT
+            # =============================================
 
             st.success(
                 f"Detected: {category.title()}"
@@ -583,20 +587,56 @@ if analyze_button:
                 f"₹{base['high']:,}"
             )
 
+            # =============================================
+            # RECYCLERS
+            # =============================================
+
             st.subheader(
                 "♻️ Matching Recyclers"
             )
 
             if recyclers:
+
                 st.dataframe(
                     recyclers,
                     use_container_width=True,
                     hide_index=True
                 )
+
             else:
+
                 st.warning(
                     "No matching recyclers found."
                 )
+
+            # =============================================
+            # AI PREDICTIONS
+            # =============================================
+
+            st.subheader(
+                "🤖 AI Prediction Breakdown"
+            )
+
+            prediction_data = []
+
+            for result in results[:5]:
+
+                prediction_data.append({
+                    "Category": LABEL_MAP.get(
+                        result["label"],
+                        result["label"]
+                    ),
+
+                    "Match Score": (
+                        f"{result['score']:.2%}"
+                    )
+                })
+
+            st.dataframe(
+                prediction_data,
+                use_container_width=True,
+                hide_index=True
+            )
 
         except Exception as e:
 
