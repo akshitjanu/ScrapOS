@@ -1,4 +1,5 @@
 streamlit
-torch==2.14.0
+torch
 transformers
+sentencepiece
 Pillow==11.3.0
