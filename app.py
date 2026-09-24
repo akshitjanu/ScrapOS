@@ -497,9 +497,14 @@ with col2:
 # ANALYZE BUTTON
 # =========================================================
 
+# =========================================================
+# ANALYZE BUTTON
+# =========================================================
+
 analyze_button = st.button(
     "🔍 Analyze E-Waste",
-    type="primary"
+    type="primary",
+    key="analyze_e_waste_button"
 )
 
 
