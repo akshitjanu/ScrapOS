@@ -1,10 +1,12 @@
 
+import sys
+import streamlit as st
 import torch
-import gradio as gr
-import spaces
 
 from PIL import Image
 from transformers import pipeline
+
+st.write("Python version:", sys.version)
 
 
 # =========================================================
