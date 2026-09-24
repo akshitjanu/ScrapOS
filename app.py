@@ -408,116 +408,212 @@ Found **{len(recycler_rows)}** matching recycler(s).
 
 
 # =========================================================
-# 11. GRADIO UI
+# STREAMLIT UI
 # =========================================================
 
-with gr.Blocks(
-    title="ScrapOS AI E-Waste Valuation"
-) as demo:
+st.title("♻️ ScrapOS")
 
-    gr.Markdown(
-        """
-        # ♻️ ScrapOS
-        ### AI-Powered E-Waste Identification & Recycler Matching
+st.subheader(
+    "AI-Powered E-Waste Identification & Recycler Matching"
+)
 
-        Upload or capture an image of e-waste,
-        estimate its indicative value,
-        and discover matching recyclers.
-        """
+st.write(
+    "Upload an image of e-waste to identify the item, "
+    "estimate its indicative value and discover matching recyclers."
+)
+
+
+# =========================================================
+# INPUT SECTION
+# =========================================================
+
+col1, col2 = st.columns(2)
+
+
+with col1:
+
+    uploaded_file = st.file_uploader(
+        "📷 Upload E-Waste Image",
+        type=["jpg", "jpeg", "png", "webp"]
     )
 
-    with gr.Row():
 
-        # -----------------------------
-        # INPUT
-        # -----------------------------
+with col2:
 
-        with gr.Column():
+    weight = st.number_input(
+        "⚖️ Approximate Weight (kg)",
+        min_value=0.1,
+        value=2.0,
+        step=0.1
+    )
 
-            image_input = gr.Image(
-                sources=["upload", "webcam"],
-                type="pil",
-                label="📷 Scan E-Waste"
-            )
-
-            weight_input = gr.Number(
-                label="⚖️ Approximate Weight (kg)",
-                value=2,
-                minimum=0.1
-            )
-
-            condition_input = gr.Radio(
-                choices=[
-                    "Working",
-                    "Partially Working",
-                    "Non-working"
-                ],
-                value="Non-working",
-                label="🔧 Condition"
-            )
-
-            location_input = gr.Textbox(
-                label="📍 Location",
-                value="Mumbai"
-            )
-
-            analyze_button = gr.Button(
-                "🔍 Analyze E-Waste",
-                variant="primary"
-            )
-
-        # -----------------------------
-        # OUTPUT
-        # -----------------------------
-
-        with gr.Column():
-
-            result_output = gr.Markdown()
-
-            prediction_output = gr.Dataframe(
-                headers=[
-                    "Detected Category",
-                    "AI Match Score (%)"
-                ],
-                datatype=[
-                    "str",
-                    "number"
-                ],
-                label="🤖 AI Predictions",
-                interactive=False
-            )
-
-            recycler_output = gr.Dataframe(
-                headers=[
-                    "Recycler",
-                    "Location",
-                    "Offer",
-                    "Pickup"
-                ],
-                datatype=[
-                    "str",
-                    "str",
-                    "str",
-                    "str"
-                ],
-                label="♻️ Matching Recyclers",
-                interactive=False
-            )
-
-    analyze_button.click(
-        fn=analyze_e_waste,
-        inputs=[
-            image_input,
-            weight_input,
-            condition_input,
-            location_input
-        ],
-        outputs=[
-            result_output,
-            prediction_output,
-            recycler_output
+    condition = st.radio(
+        "🔧 Condition",
+        [
+            "Working",
+            "Partially Working",
+            "Non-working"
         ]
     )
+
+    location = st.text_input(
+        "📍 Location",
+        value="Mumbai"
+    )
+
+
+# =========================================================
+# ANALYZE BUTTON
+# =========================================================
+
+analyze_button = st.button(
+    "🔍 Analyze E-Waste",
+    type="primary"
+)
+
+
+# =========================================================
+# ANALYSIS
+# =========================================================
+
+if analyze_button:
+
+    if uploaded_file is None:
+
+        st.error(
+            "Please upload an e-waste image."
+        )
+
+    else:
+
+        image = Image.open(
+            uploaded_file
+        ).convert("RGB")
+
+        with st.spinner(
+            "🤖 AI analyzing e-waste..."
+        ):
+
+            (
+                category,
+                score,
+                estimated_price,
+                base,
+                results,
+                recyclers
+            ) = analyze_e_waste(
+                image,
+                weight,
+                condition,
+                location
+            )
+
+
+        # =====================================================
+        # RESULT SECTION
+        # =====================================================
+
+        st.divider()
+
+        left, right = st.columns(2)
+
+
+        # -----------------------------
+        # IMAGE
+        # -----------------------------
+
+        with left:
+
+            st.image(
+                image,
+                caption="Uploaded E-Waste",
+                use_container_width=True
+            )
+
+
+        # -----------------------------
+        # AI RESULT
+        # -----------------------------
+
+        with right:
+
+            st.success(
+                f"Detected: {category.title()}"
+            )
+
+            st.metric(
+                "AI Match Score",
+                f"{score:.2%}"
+            )
+
+            st.metric(
+                "Indicative Value",
+                f"₹{estimated_price:,}"
+            )
+
+            st.caption(
+                f"Prototype category range: "
+                f"₹{base['low']:,} – "
+                f"₹{base['high']:,}"
+            )
+
+
+        # =====================================================
+        # RECYCLERS
+        # =====================================================
+
+        st.divider()
+
+        st.subheader(
+            "♻️ Matching Recyclers"
+        )
+
+        if recyclers:
+
+            st.dataframe(
+                recyclers,
+                use_container_width=True,
+                hide_index=True
+            )
+
+        else:
+
+            st.warning(
+                "No matching recyclers found "
+                "for this location."
+            )
+
+
+        # =====================================================
+        # AI PREDICTIONS
+        # =====================================================
+
+        st.divider()
+
+        st.subheader(
+            "🤖 AI Prediction Breakdown"
+        )
+
+        prediction_data = []
+
+        for result in results[:5]:
+
+            prediction_data.append({
+                "Category":
+                    LABEL_MAP.get(
+                        result["label"],
+                        result["label"]
+                    ),
+
+                "Match Score":
+                    f"{result['score']:.2%}"
+            })
+
+        st.dataframe(
+            prediction_data,
+            use_container_width=True,
+            hide_index=True
+        )
 
 
 # =========================================================
