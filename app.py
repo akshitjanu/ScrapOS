@@ -507,7 +507,119 @@ analyze_button = st.button(
     key="analyze_e_waste_button"
 )
 
+# =========================================================
+# ANALYSIS
+# =========================================================
 
+if analyze_button:
+
+    if uploaded_file is None:
+
+        st.error(
+            "Please upload an e-waste image."
+        )
+
+    else:
+
+        try:
+
+            image = Image.open(
+                uploaded_file
+            ).convert("RGB")
+
+            st.info(
+                f"Image loaded: "
+                f"{image.size[0]} × {image.size[1]}"
+            )
+
+            with st.spinner(
+                "🤖 AI analyzing e-waste..."
+            ):
+
+                (
+                    category,
+                    score,
+                    estimated_price,
+                    base,
+                    results,
+                    recyclers
+                ) = analyze_e_waste(
+                    image,
+                    weight,
+                    condition,
+                    location
+                )
+
+            st.success(
+                f"Detected: {category.title()}"
+            )
+
+            st.metric(
+                "AI Match Score",
+                f"{score:.2%}"
+            )
+
+            st.metric(
+                "Indicative Value",
+                f"₹{estimated_price:,}"
+            )
+
+            st.caption(
+                f"Prototype category range: "
+                f"₹{base['low']:,} – "
+                f"₹{base['high']:,}"
+            )
+
+            st.subheader(
+                "♻️ Matching Recyclers"
+            )
+
+            if recyclers:
+
+                st.dataframe(
+                    recyclers,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            else:
+
+                st.warning(
+                    "No matching recyclers found."
+                )
+
+            st.subheader(
+                "🤖 AI Prediction Breakdown"
+            )
+
+            prediction_data = []
+
+            for result in results[:5]:
+
+                prediction_data.append({
+                    "Category":
+                        LABEL_MAP.get(
+                            result["label"],
+                            result["label"]
+                        ),
+
+                    "Match Score":
+                        f"{result['score']:.2%}"
+                })
+
+            st.dataframe(
+                prediction_data,
+                use_container_width=True,
+                hide_index=True
+            )
+
+        except Exception as e:
+
+            st.error(
+                "❌ AI analysis failed."
+            )
+
+            st.exception(e)
 # =========================================================
 # ANALYSIS
 # =========================================================
