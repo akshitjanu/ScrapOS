@@ -15,13 +15,18 @@ st.write("Python version:", sys.version)
 
 MODEL_ID = "google/siglip-base-patch16-224"
 
-device = 0 if torch.cuda.is_available() else -1
 
-classifier = pipeline(
-    "zero-shot-image-classification",
-    model=MODEL_ID,
-    device=device
-)
+@st.cache_resource(show_spinner="Loading AI model...")
+def load_classifier():
+
+    return pipeline(
+        "zero-shot-image-classification",
+        model=MODEL_ID,
+        device=-1
+    )
+
+
+classifier = load_classifier()
 
 
 # =========================================================
@@ -209,19 +214,45 @@ RECYCLERS = [
 
 def detect_e_waste(image):
 
-    results = classifier(
-        image,
-        candidate_labels=CATEGORIES
-    )
+    try:
 
-    best_result = results[0]
+        if image is None:
+            raise ValueError("Image is empty.")
 
-    predicted_label = best_result["label"]
-    model_score = best_result["score"]
+        results = classifier(
+            image,
+            candidate_labels=CATEGORIES
+        )
 
-    clean_category = LABEL_MAP[predicted_label]
+        if not results:
+            raise ValueError(
+                "SigLIP returned no predictions."
+            )
 
-    return clean_category, model_score, results
+        best_result = results[0]
+
+        predicted_label = best_result["label"]
+        model_score = best_result["score"]
+
+        if predicted_label not in LABEL_MAP:
+            raise ValueError(
+                f"Unknown model label: {predicted_label}"
+            )
+
+        clean_category = LABEL_MAP[predicted_label]
+
+        return (
+            clean_category,
+            model_score,
+            results
+        )
+
+    except Exception as e:
+
+        raise RuntimeError(
+            f"SigLIP inference failed: "
+            f"{type(e).__name__}: {str(e)}"
+        ) from e
 
 
 # =========================================================
@@ -494,19 +525,86 @@ if analyze_button:
             "🤖 AI analyzing e-waste..."
         ):
 
-            (
-                category,
-                score,
-                estimated_price,
-                base,
-                results,
-                recyclers
-            ) = analyze_e_waste(
-                image,
-                weight,
-                condition,
-                location
+            if analyze_button:
+
+    if uploaded_file is None:
+
+        st.error(
+            "Please upload an e-waste image."
+        )
+
+    else:
+
+        try:
+
+            image = Image.open(
+                uploaded_file
+            ).convert("RGB")
+
+            st.info(
+                f"Image loaded: {image.size[0]} × {image.size[1]}"
             )
+
+            with st.spinner(
+                "🤖 AI analyzing e-waste..."
+            ):
+
+                (
+                    category,
+                    score,
+                    estimated_price,
+                    base,
+                    results,
+                    recyclers
+                ) = analyze_e_waste(
+                    image,
+                    weight,
+                    condition,
+                    location
+                )
+
+            st.success(
+                f"Detected: {category.title()}"
+            )
+
+            st.metric(
+                "AI Match Score",
+                f"{score:.2%}"
+            )
+
+            st.metric(
+                "Indicative Value",
+                f"₹{estimated_price:,}"
+            )
+
+            st.caption(
+                f"Prototype category range: "
+                f"₹{base['low']:,} – "
+                f"₹{base['high']:,}"
+            )
+
+            st.subheader(
+                "♻️ Matching Recyclers"
+            )
+
+            if recyclers:
+                st.dataframe(
+                    recyclers,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.warning(
+                    "No matching recyclers found."
+                )
+
+        except Exception as e:
+
+            st.error(
+                "❌ AI analysis failed."
+            )
+
+            st.exception(e)
 
 
         # =====================================================
