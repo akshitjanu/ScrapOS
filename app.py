@@ -309,7 +309,6 @@ def find_matching_recyclers(
 # 10. MAIN AI FUNCTION
 # =========================================================
 
-@spaces.GPU
 def analyze_e_waste(
     image,
     weight,
